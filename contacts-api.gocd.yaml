@@ -1,0 +1,117 @@
+environments:
+  contacts-api-docker:
+    pipelines:
+      - api-package
+
+pipelines:
+  api-compile:
+    group: contacts-app
+    materials:
+      mygit:  # this is the name of material
+        # says about type of material and url at once
+        git: https://github.com/ckaushik/contacts-api.git
+    stages:
+      - build: # name of stage
+          jobs:
+            build: # name of the job
+              tasks:
+                - exec: # indicates type of task
+                   command: bash
+                   arguments:
+                     - "-c"
+                     - "echo yarn install and npm test"
+              resources:
+                - yarn
+  api-package:
+    group: contacts-app
+    materials:
+      compilation:
+        pipeline: api-compile
+        stage: build
+      mygit:
+        git: https://github.com/ckaushik/contacts-api.git
+    stages:
+      - build:
+          jobs:
+            build:
+              tasks:
+                - exec:
+                   command: bash
+                   arguments:
+                     - "-c"
+                     - "docker build -t contacts-api:${GO_PIPELINE_LABEL} ."
+                - exec:
+                   command: bash
+                   arguments:
+                     - "-c"
+                     - "echo contacts-api:${GO_PIPELINE_LABEL} > contacts-api-version.txt"
+              artifacts:
+                - build:
+                    source: contacts-api-version.txt
+              resources:
+                - docker
+      - publish:
+          jobs:
+            publish:
+              tasks:
+                - fetch:
+                   stage: build
+                   job: build
+                   is_file: yes
+                   source: contacts-api-version.txt
+                - exec:
+                   command: bash
+                   arguments:
+                     - "-c"
+                     - "docker login --username ${DOCKERHUB_USER} --password ${DOCKERHUB_PASSWORD}"
+                - exec:
+                   command: bash
+                   arguments:
+                     - "-c"
+                     - "docker tag `cat contacts-api-version.txt` ${DOCKERHUB_USER}/`cat contacts-api-version.txt`"
+                - exec:
+                   command: bash
+                   arguments:
+                     - "-c"
+                     - "docker push ${DOCKERHUB_USER}/`cat contacts-api-version.txt`"
+                - exec:
+                   command: bash
+                   arguments:
+                     - "-c"
+                     - "echo ${DOCKERHUB_USER}/`cat contacts-api-version.txt` > contacts-api-image-version.txt"
+              artifacts:
+                - build:
+                    source: contacts-api-image-version.txt
+              resources:
+                - docker
+  api-deploy:
+    group: contacts-app
+    materials:
+      packaging:
+        pipeline: api-package
+        stage: publish
+      mygit:
+        git: https://github.com/ckaushik/KubernetesWorkshop.git
+    stages:
+      - deploy:
+          jobs:
+            build:
+              tasks:
+                - fetch:
+                   pipeline: api-package
+                   stage: publish
+                   job: publish
+                   is_file: yes
+                   source: contacts-api-image-version.txt
+                - exec:
+                   command: bash
+                   arguments:
+                     - "-c"
+                     - "sed -e \"s|CONTACTS_API_IMAGE|`cat contacts-api-image-version.txt`|\" -i deployment/pipeline-configs/contacts-api-deployment.yml"
+                - exec:
+                   command: bash
+                   arguments:
+                     - "-c"
+                     - "kubectl apply -f deployment/pipeline-configs/contacts-api-deployment.yml --validate=false"
+              resources:
+                - deployer
