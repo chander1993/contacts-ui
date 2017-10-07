@@ -9,7 +9,7 @@ pipelines:
     materials:
       mygit:  # this is the name of material
         # says about type of material and url at once
-        git: https://github.com/ckaushik/contacts-ui.git
+        git: https://github.com/chander1993/contacts-ui.git
     stages:
       - build: # name of stage
           jobs:
@@ -29,7 +29,7 @@ pipelines:
         pipeline: api-compile
         stage: build
       mygit:
-        git: https://github.com/ckaushik/contacts-ui.git
+        git: https://github.com/chander1993/contacts-ui.git
     stages:
       - build:
           jobs:
@@ -44,10 +44,10 @@ pipelines:
                    command: bash
                    arguments:
                      - "-c"
-                     - "echo contacts-api:${GO_PIPELINE_LABEL} > contacts-api-version.txt"
+                     - "echo contacts-api:${GO_PIPELINE_LABEL} > contacts-ui-version.txt"
               artifacts:
                 - build:
-                    source: contacts-api-version.txt
+                    source: contacts-ui-version.txt
               resources:
                 - docker
       - publish:
@@ -58,7 +58,7 @@ pipelines:
                    stage: build
                    job: build
                    is_file: yes
-                   source: contacts-api-version.txt
+                   source: contacts-ui-version.txt
                 - exec:
                    command: bash
                    arguments:
@@ -68,20 +68,20 @@ pipelines:
                    command: bash
                    arguments:
                      - "-c"
-                     - "docker tag `cat contacts-api-version.txt` ${DOCKERHUB_USER}/`cat contacts-api-version.txt`"
+                     - "docker tag `cat contacts-ui-version.txt` ${DOCKERHUB_USER}/`cat contacts-ui-version.txt`"
                 - exec:
                    command: bash
                    arguments:
                      - "-c"
-                     - "docker push ${DOCKERHUB_USER}/`cat contacts-api-version.txt`"
+                     - "docker push ${DOCKERHUB_USER}/`cat contacts-ui-version.txt`"
                 - exec:
                    command: bash
                    arguments:
                      - "-c"
-                     - "echo ${DOCKERHUB_USER}/`cat contacts-api-version.txt` > contacts-api-image-version.txt"
+                     - "echo ${DOCKERHUB_USER}/`cat contacts-ui-version.txt` > contacts-ui-image-version.txt"
               artifacts:
                 - build:
-                    source: contacts-api-image-version.txt
+                    source: contacts-ui-image-version.txt
               resources:
                 - docker
   api-deploy:
@@ -102,16 +102,16 @@ pipelines:
                    stage: publish
                    job: publish
                    is_file: yes
-                   source: contacts-api-image-version.txt
+                   source: contacts-ui-image-version.txt
                 - exec:
                    command: bash
                    arguments:
                      - "-c"
-                     - "sed -e \"s|CONTACTS_API_IMAGE|`cat contacts-api-image-version.txt`|\" -i deployment/pipeline-configs/contacts-api-deployment.yml"
+                     - "sed -e \"s|CONTACTS_API_IMAGE|`cat contacts-ui-image-version.txt`|\" -i deployment/pipeline-configs/contacts-ui-deployment.yml"
                 - exec:
                    command: bash
                    arguments:
                      - "-c"
-                     - "kubectl apply -f deployment/pipeline-configs/contacts-api-deployment.yml --validate=false"
+                     - "kubectl apply -f deployment/pipeline-configs/contacts-ui-deployment.yml --validate=false"
               resources:
                 - deployer
