@@ -1,10 +1,10 @@
 environments:
   contacts-api-docker:
     pipelines:
-      - api-package
+      - ui-package
 
 pipelines:
-  api-compile:
+  ui-compile:
     group: contacts-app
     materials:
       mygit:  # this is the name of material
@@ -22,11 +22,11 @@ pipelines:
                      - "echo yarn install and npm test"
               resources:
                 - yarn
-  api-package:
+  ui-package:
     group: contacts-app
     materials:
       compilation:
-        pipeline: api-compile
+        pipeline: ui-compile
         stage: build
       mygit:
         git: https://github.com/chander1993/contacts-ui.git
@@ -84,11 +84,11 @@ pipelines:
                     source: contacts-ui-image-version.txt
               resources:
                 - docker
-  api-deploy:
+  ui-deploy:
     group: contacts-app
     materials:
       packaging:
-        pipeline: api-package
+        pipeline: ui-package
         stage: publish
       mygit:
         git: https://github.com/ckaushik/KubernetesWorkshop.git
@@ -98,7 +98,7 @@ pipelines:
             build:
               tasks:
                 - fetch:
-                   pipeline: api-package
+                   pipeline: ui-package
                    stage: publish
                    job: publish
                    is_file: yes
